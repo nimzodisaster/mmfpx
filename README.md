@@ -1,6 +1,9 @@
 Package: mmfpx
+
 Title: Fractional Polynomial Mixed-Effects Utilities
+
 Version: 0.4.0
+
 Author: Josh Lee
 
 
