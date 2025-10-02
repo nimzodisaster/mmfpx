@@ -1,0 +1,34 @@
+Package: mmfpx
+Type: Package
+Title: Fractional Polynomial Mixed-Effects Utilities
+Version: 0.4.0
+Author: Josh K. Lee
+Maintainer: Josh K Lee <jkilee@ucdavis.edu>
+Description: Tools for exploring fractional polynomial relationships in neuroimaging
+  and related longitudinal data. Provides utilities for bagged fractional polynomial
+  normalization of regional measures as well as mixed-effects model selection using
+  multiple fractional polynomials with support for raw, ratio, or standard
+  deviation-based age scaling.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Imports:
+    dplyr,
+    tidyr,
+    MASS,
+    magrittr,
+    rlang,
+    purrr,
+    parallel,
+    stats,
+    utils,
+    nlme
+RoxygenNote: 7.3.3
+Suggests: 
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Depends: 
+    R (>= 3.5)

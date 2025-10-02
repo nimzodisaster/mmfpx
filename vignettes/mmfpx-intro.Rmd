@@ -1,0 +1,123 @@
+---
+title: "Getting Started with mmfpx"
+author: "Josh K. Lee"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with mmfpx}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette walks through a minimal workflow for the `mmfpx` package using the
+included `simulated_longitudinal_data` dataset.
+
+`mmfp()` fits fractional polynomial mixed-effects models so you can uncover
+non-linear age trajectories while still accounting for subject-level
+correlation. It handles the common problem of longitudinal biomarkers whose
+curvature is missed by standard linear random-effects models.
+By default it keeps the raw age scale (after verifying all ages are strictly
+positive), but you can optionally request ratio scaling via
+`centering = "ratio"` or variance-stabilising scaling with
+`centering = "sd"`, which divides age by its sample standard deviation without
+recentering.
+
+`normbytcv()` rescales regions of interest against a reference volume to remove
+global size effects. It addresses the need to compare baseline scans from
+subjects with different head sizes or tissue totals when longitudinal
+measurements are not the focus.
+
+## Data overview
+
+```{r}
+library(mmfpx)
+
+data("simulated_longitudinal_data")
+
+str(simulated_longitudinal_data)
+```
+
+For the examples below we use the full dataset, which remains manageable for
+the models demonstrated here.
+
+## Fractional polynomial mixed-effects models
+
+We can evaluate candidate fractional polynomial mixed-effects models for
+`volumeA` as the outcome, using `age` as the predictor and `subj_id` for the
+random-effects grouping structure.
+
+```{r}
+fp_results <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  powers = c("log", 1),
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results$results$volumeA$summary
+```
+
+The summary table includes log-likelihood, deviance, AIC, and BIC values for
+each fitted model, helping identify transformations that best capture the
+non-linear age relationship in the outcome of interest.
+If you encounter convergence challenges or want more interpretable random
+effect variances, set `centering = "sd"` to divide age by its standard
+deviation before estimating the candidate models.
+
+## Normalising volumes with `normbytcv`
+
+We can also normalise a region of interest by another volumetric measure using
+the `normbytcv()` function. The example below keeps only the first visit per
+participant and adjusts `volumeA` for its non-linear association with `volumeB`.
+
+```{r}
+baseline_data <- simulated_longitudinal_data[
+  simulated_longitudinal_data$visit == 1,
+  ,
+  drop = FALSE
+]
+
+norm_results <- normbytcv(
+  data = baseline_data,
+  TBV_var = "volumeB",
+  ROI_vars = "volumeA",
+  subject_id_vars = "subj_id",
+  powers_set = c("log", 0.5, 1),
+  proportion = 0.75,
+  num_cores = 1,
+  plot_models = FALSE,
+  save_results = FALSE
+)
+
+purrr::map_dfr(
+  norm_results$results$volumeA$filtered_models,
+  ~ tibble::tibble(
+    model_type = .x$model_type,
+    p1 = .x$powers$p1,
+    p2 = .x$powers$p2,
+    AIC = .x$model_aic
+  )
+)
+
+head(norm_results$adjusted_volumes)
+```
+
+The resulting list contains adjusted ROI values and information about the
+fractional polynomial models that were retained after applying the bagging
+criterion.
+
+## Next steps
+
+You can expand this workflow by adding other outcomes, experimenting with the
+available power sets, and comparing random-slope specifications or correlation
+structures by adjusting the arguments supplied to `mmfp()`.

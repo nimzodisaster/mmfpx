@@ -1,0 +1,5 @@
+#usethis::use_package("dplyr", type = "Imports")
+#usethis::use_package("MASS", type = "Imports")
+#usethis::use_package("purrr", type = "Imports")
+#usethis::use_package("tidyr", type = "Imports")
+#usethis::use_package("parallel", type = "Imports")
