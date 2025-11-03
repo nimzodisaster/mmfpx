@@ -10,7 +10,10 @@
 #'   fractional polynomials. Defaults to `"age"`.
 #' @param static_formula Optional additional fixed-effect terms supplied as a one-sided
 #'   formula (for example `~ sex + site`) or a character string (for example
-#'   `"sex + site"`). These predictors are added to every model.
+#'   `"sex + site"`). These predictors are added to every model. When supplied as a
+#'   character, a shorthand of the form `"*var"` is supported to interact the
+#'   fractional polynomial terms with `var`. For example, `"*sex"` yields
+#'   `~ .fp1*sex` for FP1 models and `~ .fp1*sex + .fp2*sex` for FP2 models.
 #' @param id_var Subject identifier used for the random-effects structure. Defaults to
 #'   `"subj_id"`.
 #' @param visit_var Visit (or time) variable used when estimating within-subject
@@ -53,6 +56,25 @@
 #'   id\_var = "subj\_id",
 #'   visit\_var = "visit"
 #' )
+#'
+#' # Interactions with FP terms using shorthand
+#' # If your data contain a grouping variable like 'diagnosis', you can request
+#' # interactions with the FP terms by supplying a character shorthand such as
+#' # "*diagnosis". FP1 models will include .fp1*diagnosis, while FP2 models will
+#' # include both .fp1*diagnosis and .fp2*diagnosis.
+#' mmfp\_results\_int <- mmfp(
+#'   data = demo\_data,
+#'   outcome\_vars = c("roi\_volume"),
+#'   age\_var = "age",
+#'   static\_formula = "*diagnosis",
+#'   id\_var = "subj\_id",
+#'   visit\_var = "visit"
+#' )
+#'
+#' # Alternatively, you can specify explicit interactions in a one-sided formula
+#' # using the internal .fp1/.fp2 placeholders, for example:
+#' #   static_formula = ~ .fp1*diagnosis + .fp2*diagnosis
+#' # The shorthand is recommended for convenience.
 #' }
 #'
 #' @import dplyr
@@ -145,29 +167,60 @@ mmfp <- function(data,
     )
   }
 
+  # Parse the optional static formula. Adds support for a shorthand where
+  # a character like "*sex" expands to interactions with all FP terms.
+  # Returns a list with:
+  #   - expr: the raw expression string (possibly containing shorthand)
+  #   - vars: variable names referenced (for data availability checks)
+  #   - star_terms: variables appearing after shorthand '*' (character)
+  #   - has_star: logical indicating presence of shorthand terms
   parse_static_formula <- function(x) {
     if (is.null(x) || (is.character(x) && all(trimws(x) == ""))) {
-      return(list(expr = "", vars = character(0)))
+      return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
     }
+
     if (inherits(x, "formula")) {
+      # e.g., ~ sex + site (explicit interactions must be fully specified here)
       rhs <- as.character(x)
       rhs <- rhs[length(rhs)]
-    } else if (is.character(x) && length(x) == 1) {
-      rhs <- x
-    } else {
-      stop("'static_formula' must be NULL, a one-sided formula, or a single character string.")
+      rhs <- trimws(rhs)
+      if (rhs == "") {
+        return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
+      }
+      # Extract variable symbols (avoid term.labels to not include interaction labels like 'a:b')
+      vars <- all.vars(stats::as.formula(paste("~", rhs)))
+      return(list(expr = rhs, vars = vars, star_terms = character(0), has_star = FALSE))
     }
-    rhs <- trimws(rhs)
-    if (rhs == "") {
-      return(list(expr = "", vars = character(0)))
+
+    if (is.character(x) && length(x) == 1) {
+      rhs <- trimws(x)
+      if (rhs == "") {
+        return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
+      }
+
+      # Detect shorthand pieces beginning with '*'
+      # Split on top-level '+' for simple cases
+      pieces <- strsplit(rhs, "\\+")[[1]]
+      pieces <- trimws(pieces)
+      is_star <- grepl("^\\*", pieces)
+      star_raw <- gsub("^\\*", "", pieces[is_star])
+      star_raw <- trimws(star_raw)
+      # Variable names used anywhere in the expression (without expanding shorthand)
+      # Use all.vars on the non-shorthand pieces plus shorthand payloads.
+      non_star <- pieces[!is_star]
+      vars_expr <- c(non_star, star_raw)
+      vars_expr <- vars_expr[nzchar(vars_expr)]
+      vars <- if (length(vars_expr) > 0) all.vars(stats::as.formula(paste("~", paste(vars_expr, collapse = "+")))) else character(0)
+
+      return(list(expr = rhs, vars = vars, star_terms = star_raw, has_star = any(is_star)))
     }
-    formula_terms <- stats::terms(stats::as.formula(paste("~", rhs)))
-    vars <- attr(formula_terms, "term.labels")
-    list(expr = rhs, vars = vars)
+
+    stop("'static_formula' must be NULL, a one-sided formula, or a single character string.")
   }
 
   static_info <- parse_static_formula(static_formula)
-  additional_vars <- static_info$vars
+  # Additional variables needed from data. Exclude internal FP placeholders if present.
+  additional_vars <- setdiff(unique(c(static_info$vars, static_info$star_terms)), c(".fp1", ".fp2"))
 
   required_vars <- unique(c(outcome_vars, age_var, id_var, visit_var, additional_vars))
   missing_vars <- setdiff(required_vars, names(data))
@@ -177,9 +230,9 @@ mmfp <- function(data,
   }
 
   predictor_var <- switch(centering,
-    ratio = paste0(age_var, "_cr"),
-    sd = paste0(age_var, "_sd"),
-    age_var
+                          ratio = paste0(age_var, "_cr"),
+                          sd = paste0(age_var, "_sd"),
+                          age_var
   )
   predictor_sym <- rlang::sym(predictor_var)
 
@@ -254,9 +307,26 @@ mmfp <- function(data,
 
   build_fixed_formula <- function(outcome, fp_terms) {
     rhs_terms <- fp_terms
+
     if (static_info$expr != "") {
-      rhs_terms <- c(rhs_terms, static_info$expr)
+      expr <- static_info$expr
+
+      # Expand shorthand like "*sex" into ".fp1*sex" (+ ".fp2*sex" if present)
+      if (isTRUE(static_info$has_star) && length(static_info$star_terms) > 0) {
+        # Build interaction terms for each star var with all FP terms
+        star_expanded <- unlist(lapply(static_info$star_terms, function(v) paste(fp_terms, paste0("*", v), sep = "")))
+        # Keep any non-star pieces as-is
+        pieces <- strsplit(expr, "\\+")[[1]]
+        pieces <- trimws(pieces)
+        non_star <- pieces[!grepl("^\\*", pieces)]
+        non_star <- non_star[nzchar(non_star)]
+        rhs_terms <- c(rhs_terms, star_expanded, non_star)
+      } else {
+        # No shorthand detected; append expression as-is
+        rhs_terms <- c(rhs_terms, expr)
+      }
     }
+
     rhs <- paste(rhs_terms, collapse = " + ")
     stats::as.formula(paste(outcome, "~", rhs))
   }
