@@ -84,24 +84,15 @@
 #' @importFrom stats AIC BIC as.formula logLik terms sd
 #' @importFrom rlang .data sym :=
 #' @export
-mmfp <- function(data,
-                 outcome_vars,
-                 age_var = "age",
-                 static_formula = NULL,
-                 id_var = "subj_id",
-                 visit_var = "visit",
-                 correlation = FALSE,
-                 powers = c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3),
-                 random_intercept_only = FALSE,
-                 centering = c("none", "ratio", "sd"),
-                 centering_value = NULL,
-                 method = c("ML", "REML"),
-                 control = NULL,
-                 keep_models = FALSE,
-                 verbose = FALSE) {
+mmfp <- function (data, outcome_vars, age_var = "age", static_formula = NULL,
+                  id_var = "subj_id", visit_var = "visit", correlation = FALSE,
+                  powers = c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3), random_intercept_only = FALSE,
+                  centering = c("none", "ratio", "sd"), centering_value = NULL,
+                  method = c("ML", "REML"), control = NULL, keep_models = FALSE,
+                  verbose = FALSE)
+{
   method <- match.arg(method)
   centering <- match.arg(centering)
-
   if (missing(data) || is.null(data)) {
     stop("'data' must be supplied.")
   }
@@ -122,7 +113,6 @@ mmfp <- function(data,
   if (!visit_var %in% names(data)) {
     stop("The specified 'visit_var' is not found in 'data'.")
   }
-
   age_values <- data[[age_var]]
   if (any(is.na(age_values))) {
     warning("'age_var' contains missing values. Rows with missing values will be dropped.")
@@ -130,132 +120,111 @@ mmfp <- function(data,
   if (any(age_values <= 0, na.rm = TRUE)) {
     stop("All values of 'age_var' must be strictly positive to support fractional-polynomial transforms.")
   }
-
   if (centering == "ratio") {
     if (is.null(centering_value)) {
       centering_value <- mean(age_values, na.rm = TRUE)
     }
-    if (!is.numeric(centering_value) || length(centering_value) != 1 || is.na(centering_value)) {
+    if (!is.numeric(centering_value) || length(centering_value) !=
+        1 || is.na(centering_value)) {
       stop("'centering_value' must be a single numeric value.")
     }
     if (centering_value <= 0) {
       stop("'centering_value' must be strictly positive.")
     }
     centering_value_used <- centering_value
-  } else if (centering == "sd") {
+  }
+  else if (centering == "sd") {
     if (!is.null(centering_value)) {
       warning("'centering_value' is ignored when centering = 'sd'.")
     }
     centering_value_used <- stats::sd(age_values, na.rm = TRUE)
-    if (!is.finite(centering_value_used) || centering_value_used <= 0) {
+    if (!is.finite(centering_value_used) || centering_value_used <=
+        0) {
       stop("The standard deviation of 'age_var' must be positive to support SD scaling.")
     }
-  } else {
+  }
+  else {
     if (!is.null(centering_value)) {
       warning("'centering_value' is ignored when centering = 'none'.")
     }
     centering_value_used <- NA_real_
   }
-
   if (is.null(control)) {
-    control <- nlme::lmeControl(
-      opt = "optim",
-      maxIter = 2000,
-      msMaxIter = 2000,
-      niterEM = 100,
-      msVerbose = verbose
-    )
+    control <- nlme::lmeControl(opt = "optim", maxIter = 2000,
+                                msMaxIter = 2000, niterEM = 100, msVerbose = verbose)
   }
-
-  # Parse the optional static formula. Adds support for a shorthand where
-  # a character like "*sex" expands to interactions with all FP terms.
-  # Returns a list with:
-  #   - expr: the raw expression string (possibly containing shorthand)
-  #   - vars: variable names referenced (for data availability checks)
-  #   - star_terms: variables appearing after shorthand '*' (character)
-  #   - has_star: logical indicating presence of shorthand terms
   parse_static_formula <- function(x) {
-    if (is.null(x) || (is.character(x) && all(trimws(x) == ""))) {
-      return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
+    if (is.null(x) || (is.character(x) && all(trimws(x) ==
+                                              ""))) {
+      return(list(expr = "", vars = character(0), star_terms = character(0),
+                  has_star = FALSE))
     }
-
     if (inherits(x, "formula")) {
-      # e.g., ~ sex + site (explicit interactions must be fully specified here)
       rhs <- as.character(x)
       rhs <- rhs[length(rhs)]
       rhs <- trimws(rhs)
       if (rhs == "") {
-        return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
+        return(list(expr = "", vars = character(0), star_terms = character(0),
+                    has_star = FALSE))
       }
-      # Extract variable symbols (avoid term.labels to not include interaction labels like 'a:b')
       vars <- all.vars(stats::as.formula(paste("~", rhs)))
-      return(list(expr = rhs, vars = vars, star_terms = character(0), has_star = FALSE))
+      return(list(expr = rhs, vars = vars, star_terms = character(0),
+                  has_star = FALSE))
     }
-
     if (is.character(x) && length(x) == 1) {
       rhs <- trimws(x)
       if (rhs == "") {
-        return(list(expr = "", vars = character(0), star_terms = character(0), has_star = FALSE))
+        return(list(expr = "", vars = character(0), star_terms = character(0),
+                    has_star = FALSE))
       }
-
-      # Detect shorthand pieces beginning with '*'
-      # Split on top-level '+' for simple cases
       pieces <- strsplit(rhs, "\\+")[[1]]
       pieces <- trimws(pieces)
       is_star <- grepl("^\\*", pieces)
       star_raw <- gsub("^\\*", "", pieces[is_star])
       star_raw <- trimws(star_raw)
-      # Variable names used anywhere in the expression (without expanding shorthand)
-      # Use all.vars on the non-shorthand pieces plus shorthand payloads.
       non_star <- pieces[!is_star]
       vars_expr <- c(non_star, star_raw)
       vars_expr <- vars_expr[nzchar(vars_expr)]
-      vars <- if (length(vars_expr) > 0) all.vars(stats::as.formula(paste("~", paste(vars_expr, collapse = "+")))) else character(0)
-
-      return(list(expr = rhs, vars = vars, star_terms = star_raw, has_star = any(is_star)))
+      vars <- if (length(vars_expr) > 0)
+        all.vars(stats::as.formula(paste("~", paste(vars_expr,
+                                                    collapse = "+"))))
+      else character(0)
+      return(list(expr = rhs, vars = vars, star_terms = star_raw,
+                  has_star = any(is_star)))
     }
-
     stop("'static_formula' must be NULL, a one-sided formula, or a single character string.")
   }
 
   static_info <- parse_static_formula(static_formula)
-  # Additional variables needed from data. Exclude internal FP placeholders if present.
-  additional_vars <- setdiff(unique(c(static_info$vars, static_info$star_terms)), c(".fp1", ".fp2"))
 
-  required_vars <- unique(c(outcome_vars, age_var, id_var, visit_var, additional_vars))
+  additional_vars <- setdiff(unique(static_info$vars), c(".fp1", ".fp2"))
+
+  required_vars <- unique(c(outcome_vars, age_var, id_var,
+                            visit_var, additional_vars))
   missing_vars <- setdiff(required_vars, names(data))
   if (length(missing_vars) > 0) {
     stop("The following variables required for modelling are missing from 'data': ",
          paste(missing_vars, collapse = ", "))
   }
-
-  predictor_var <- switch(centering,
-                          ratio = paste0(age_var, "_cr"),
-                          sd = paste0(age_var, "_sd"),
-                          age_var
-  )
+  predictor_var <- switch(centering, ratio = paste0(age_var,
+                                                    "_cr"), sd = paste0(age_var, "_sd"), age_var)
   predictor_sym <- rlang::sym(predictor_var)
-
   select_vars <- unique(c(required_vars, predictor_var))
-
-  data_model <- data %>%
-    dplyr::mutate(!!predictor_sym := if (centering == "none") {
-      .data[[age_var]]
-    } else {
-      .data[[age_var]] / centering_value_used
-    }) %>%
-    dplyr::select(dplyr::all_of(select_vars)) %>%
+  data_model <- data %>% dplyr::mutate(`:=`(!!predictor_sym,
+                                            if (centering == "none") {
+                                              .data[[age_var]]
+                                            }
+                                            else {
+                                              .data[[age_var]]/centering_value_used
+                                            })) %>% dplyr::select(dplyr::all_of(select_vars)) %>%
     tidyr::drop_na()
-
   if (nrow(data_model) == 0) {
     stop("No observations remain after removing rows with missing values in required variables.")
   }
-
   powers <- unique(powers)
   if (length(powers) == 0) {
     stop("Provide at least one candidate power in 'powers'.")
   }
-
   format_power <- function(p) {
     if (is.character(p)) {
       return(tolower(p))
@@ -265,11 +234,9 @@ mmfp <- function(data,
     }
     as.character(p)
   }
-
   is_same_power <- function(p1, p2) {
     format_power(p1) == format_power(p2)
   }
-
   transform_power <- function(x, p) {
     if (is.character(p)) {
       if (tolower(p) == "log") {
@@ -286,7 +253,6 @@ mmfp <- function(data,
     }
     x^as.numeric(p)
   }
-
   build_model_data <- function(df, p1, p2 = NULL) {
     predictor_values <- df[[predictor_var]]
     fp1 <- transform_power(predictor_values, p1)
@@ -294,43 +260,41 @@ mmfp <- function(data,
     if (is.null(p2)) {
       df$.fp2 <- NULL
       fp_terms <- c(".fp1")
-    } else {
+    }
+    else {
       if (is_same_power(p1, p2)) {
         df$.fp2 <- fp1 * log(predictor_values)
-      } else {
-        df$.fp2 <- transform_power(predictor_values, p2)
+      }
+      else {
+        df$.fp2 <- transform_power(predictor_values,
+                                   p2)
       }
       fp_terms <- c(".fp1", ".fp2")
     }
     list(data = df, fp_terms = fp_terms)
   }
-
   build_fixed_formula <- function(outcome, fp_terms) {
     rhs_terms <- fp_terms
-
     if (static_info$expr != "") {
       expr <- static_info$expr
-
-      # Expand shorthand like "*sex" into ".fp1*sex" (+ ".fp2*sex" if present)
-      if (isTRUE(static_info$has_star) && length(static_info$star_terms) > 0) {
-        # Build interaction terms for each star var with all FP terms
-        star_expanded <- unlist(lapply(static_info$star_terms, function(v) paste(fp_terms, paste0("*", v), sep = "")))
-        # Keep any non-star pieces as-is
+      if (isTRUE(static_info$has_star) && length(static_info$star_terms) >
+          0) {
+        star_expanded <- unlist(lapply(static_info$star_terms,
+                                       function(v) paste(fp_terms, paste0("*", v),
+                                                         sep = "")))
         pieces <- strsplit(expr, "\\+")[[1]]
         pieces <- trimws(pieces)
         non_star <- pieces[!grepl("^\\*", pieces)]
         non_star <- non_star[nzchar(non_star)]
         rhs_terms <- c(rhs_terms, star_expanded, non_star)
-      } else {
-        # No shorthand detected; append expression as-is
+      }
+      else {
         rhs_terms <- c(rhs_terms, expr)
       }
     }
-
     rhs <- paste(rhs_terms, collapse = " + ")
     stats::as.formula(paste(outcome, "~", rhs))
   }
-
   build_random_formula <- function(fp_terms) {
     if (random_intercept_only) {
       return(stats::as.formula(paste("~ 1 |", id_var)))
@@ -338,49 +302,37 @@ mmfp <- function(data,
     rhs <- paste(fp_terms, collapse = " + ")
     stats::as.formula(paste("~", rhs, "|", id_var))
   }
-
   fit_single_model <- function(model_data, outcome, p1, p2 = NULL) {
     fp_info <- build_model_data(model_data, p1, p2)
     fixed_formula <- build_fixed_formula(outcome, fp_info$fp_terms)
     random_formula <- build_random_formula(fp_info$fp_terms)
-
     tryCatch({
       if (correlation) {
-        nlme::lme(
-          fixed = fixed_formula,
-          data = fp_info$data,
-          random = random_formula,
-          correlation = nlme::corSymm(form = stats::as.formula(paste("~", visit_var))),
-          control = control,
-          method = method
-        )
-      } else {
-        nlme::lme(
-          fixed = fixed_formula,
-          data = fp_info$data,
-          random = random_formula,
-          control = control,
-          method = method
-        )
+        nlme::lme(fixed = fixed_formula, data = fp_info$data,
+                  random = random_formula, correlation = nlme::corSymm(form = stats::as.formula(paste("~",
+                                                                                                      visit_var))), control = control, method = method)
+      }
+      else {
+        nlme::lme(fixed = fixed_formula, data = fp_info$data,
+                  random = random_formula, control = control,
+                  method = method)
       }
     }, error = function(e) {
       if (verbose) {
-        message("Model failed for ", outcome, ": p1=", format_power(p1),
-                if (!is.null(p2)) paste(", p2=", format_power(p2), sep = ""),
+        message("Model failed for ", outcome, ": p1=",
+                format_power(p1), if (!is.null(p2))
+                  paste(", p2=", format_power(p2), sep = ""),
                 ". Error: ", conditionMessage(e))
       }
       NULL
     })
   }
-
   fp2_combinations <- utils::combn(powers, 2, simplify = FALSE)
-  fp2_combinations <- c(fp2_combinations, lapply(powers, function(p) c(p, p)))
-
+  fp2_combinations <- c(fp2_combinations, lapply(powers, function(p) c(p,
+                                                                       p)))
   outcome_results <- purrr::map(outcome_vars, function(outcome) {
     summaries <- list()
     models <- list()
-
-    # FP1 models
     for (p in powers) {
       model <- fit_single_model(data_model, outcome, p)
       if (is.null(model)) {
@@ -390,76 +342,48 @@ mmfp <- function(data,
       if (keep_models) {
         models[[model_id]] <- model
       }
-      model_summary <- dplyr::tibble(
-        outcome = outcome,
-        model_id = model_id,
-        model_type = "FP1",
-        p1 = format_power(p),
-        p2 = NA_character_,
-        logLik = as.numeric(stats::logLik(model)),
-        deviance = -2 * as.numeric(stats::logLik(model)),
-        AIC = stats::AIC(model),
-        BIC = stats::BIC(model)
-      )
+      model_summary <- dplyr::tibble(outcome = outcome,
+                                     model_id = model_id, model_type = "FP1", p1 = format_power(p),
+                                     p2 = NA_character_, logLik = as.numeric(stats::logLik(model)),
+                                     deviance = -2 * as.numeric(stats::logLik(model)),
+                                     AIC = stats::AIC(model), BIC = stats::BIC(model))
       summaries[[length(summaries) + 1]] <- model_summary
     }
-
-    # FP2 models
     for (pair in fp2_combinations) {
       p1 <- pair[[1]]
       p2 <- pair[[2]]
-      model <- fit_single_model(data_model, outcome, p1, p2)
+      model <- fit_single_model(data_model, outcome, p1,
+                                p2)
       if (is.null(model)) {
         next
       }
-      model_id <- paste0("FP2_", format_power(p1), "_", format_power(p2))
+      model_id <- paste0("FP2_", format_power(p1), "_",
+                         format_power(p2))
       if (keep_models) {
         models[[model_id]] <- model
       }
-      model_summary <- dplyr::tibble(
-        outcome = outcome,
-        model_id = model_id,
-        model_type = "FP2",
-        p1 = format_power(p1),
-        p2 = format_power(p2),
-        logLik = as.numeric(stats::logLik(model)),
-        deviance = -2 * as.numeric(stats::logLik(model)),
-        AIC = stats::AIC(model),
-        BIC = stats::BIC(model)
-      )
+      model_summary <- dplyr::tibble(outcome = outcome,
+                                     model_id = model_id, model_type = "FP2", p1 = format_power(p1),
+                                     p2 = format_power(p2), logLik = as.numeric(stats::logLik(model)),
+                                     deviance = -2 * as.numeric(stats::logLik(model)),
+                                     AIC = stats::AIC(model), BIC = stats::BIC(model))
       summaries[[length(summaries) + 1]] <- model_summary
     }
-
     if (length(summaries) == 0) {
-      warning("No models converged for outcome '", outcome, "'.")
-      outcome_summary <- dplyr::tibble(
-        outcome = character(0),
-        model_id = character(0),
-        model_type = character(0),
-        p1 = character(0),
-        p2 = character(0),
-        logLik = numeric(0),
-        deviance = numeric(0),
-        AIC = numeric(0),
-        BIC = numeric(0)
-      )
-    } else {
+      warning("No models converged for outcome '", outcome,
+              "'.")
+      outcome_summary <- dplyr::tibble(outcome = character(0),
+                                       model_id = character(0), model_type = character(0),
+                                       p1 = character(0), p2 = character(0), logLik = numeric(0),
+                                       deviance = numeric(0), AIC = numeric(0), BIC = numeric(0))
+    }
+    else {
       outcome_summary <- dplyr::bind_rows(summaries) %>%
         dplyr::arrange(.data$model_type, .data$AIC)
     }
-
-    list(
-      summary = outcome_summary,
-      models = if (keep_models) models else NULL
-    )
+    list(summary = outcome_summary, models = if (keep_models) models else NULL)
   })
-
   names(outcome_results) <- outcome_vars
-
-  list(
-    centering_mode = centering,
-    centering_value = centering_value_used,
-    predictor_variable = predictor_var,
-    results = outcome_results
-  )
+  list(centering_mode = centering, centering_value = centering_value_used,
+       predictor_variable = predictor_var, results = outcome_results)
 }
