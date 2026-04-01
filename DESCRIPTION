@@ -1,7 +1,7 @@
 Package: mmfpx
 Type: Package
 Title: Fractional Polynomial Mixed-Effects Utilities
-Version: 0.4.1
+Version: 0.4.2
 Author: Josh K. Lee
 Maintainer: Josh K Lee <jkilee@ucdavis.edu>
 Description: Tools for exploring fractional polynomial relationships in neuroimaging
@@ -13,6 +13,7 @@ License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
 Imports:
+    brms,
     dplyr,
     tidyr,
     MASS,
@@ -21,6 +22,7 @@ Imports:
     purrr,
     parallel,
     stats,
+    tibble,
     utils,
     nlme
 RoxygenNote: 7.3.3

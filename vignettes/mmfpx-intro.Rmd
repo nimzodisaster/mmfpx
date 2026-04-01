@@ -27,6 +27,8 @@ positive), but you can optionally request ratio scaling via
 `centering = "ratio"` or variance-stabilising scaling with
 `centering = "sd"`, which divides age by its sample standard deviation without
 recentering.
+By default `mmfp()` evaluates both one-term (FP1) and two-term (FP2) models;
+set `fp_models = "fp1"` when you only want one-term candidates.
 
 `normbytcv()` rescales regions of interest against a reference volume to remove
 global size effects. It addresses the need to compare baseline scans from
@@ -67,12 +69,58 @@ fp_results <- mmfp(
 fp_results$results$volumeA$summary
 ```
 
+To fit only one-term fractional polynomial models, set `fp_models = "fp1"`:
+
+```{r}
+fp_results_fp1_only <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  powers = c("log", 1),
+  fp_models = "fp1",
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_fp1_only$results$volumeA$summary
+```
+
 The summary table includes log-likelihood, deviance, AIC, and BIC values for
 each fitted model, helping identify transformations that best capture the
 non-linear age relationship in the outcome of interest.
 If you encounter convergence challenges or want more interpretable random
 effect variances, set `centering = "sd"` to divide age by its standard
 deviation before estimating the candidate models.
+
+### Interacting FP terms with a covariate
+
+You can include interactions between the fractional polynomial (FP) terms and
+another covariate using a shorthand in `static_formula`. For example, to allow
+different FP trajectories by `diagnosis`, supply `"*diagnosis"` as a character
+string:
+
+```{r}
+fp_results_interact <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  static_formula = "*diagnosis",  # expands to .fp1*diagnosis (+ .fp2*diagnosis)
+  powers = c("log", 1),
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_interact$results$volumeA$summary
+```
+
+In FP1 models, the shorthand adds `.fp1*diagnosis`. In FP2 models it adds both
+`.fp1*diagnosis` and `.fp2*diagnosis`. You can mix shorthand with additional
+additive terms, e.g. `static_formula = "*diagnosis + visit"` to also include a
+main effect of `visit`.
 
 ## Normalising volumes with `normbytcv`
 

@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.codex
+renv/staging/
+*.Rcheck/
+*.tar.gz

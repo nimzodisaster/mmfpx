@@ -1,4 +1,4 @@
-## ----include = FALSE----------------------------------------------------------
+## ---- include = FALSE---------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -24,6 +24,36 @@ fp_results <- mmfp(
 )
 
 fp_results$results$volumeA$summary
+
+## -----------------------------------------------------------------------------
+fp_results_fp1_only <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  powers = c("log", 1),
+  fp_models = "fp1",
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_fp1_only$results$volumeA$summary
+
+## -----------------------------------------------------------------------------
+fp_results_interact <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  static_formula = "*diagnosis",  # expands to .fp1*diagnosis (+ .fp2*diagnosis)
+  powers = c("log", 1),
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_interact$results$volumeA$summary
 
 ## -----------------------------------------------------------------------------
 baseline_data <- simulated_longitudinal_data[

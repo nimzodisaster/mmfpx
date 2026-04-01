@@ -13,6 +13,7 @@ mmfp(
   visit_var = "visit",
   correlation = FALSE,
   powers = c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3),
+  fp_models = c("both", "fp1"),
   random_intercept_only = FALSE,
   centering = c("none", "ratio", "sd"),
   centering_value = NULL,
@@ -32,7 +33,10 @@ fractional polynomials. Defaults to `"age"`.}
 
 \item{static_formula}{Optional additional fixed-effect terms supplied as a one-sided
 formula (for example `~ sex + site`) or a character string (for example
-`"sex + site"`). These predictors are added to every model.}
+`"sex + site"`). These predictors are added to every model. When supplied as a
+character, a shorthand of the form `"*var"` is supported to interact the
+fractional polynomial terms with `var`. For example, `"*sex"` yields
+`~ .fp1*sex` for FP1 models and `~ .fp1*sex + .fp2*sex` for FP2 models.}
 
 \item{id_var}{Subject identifier used for the random-effects structure. Defaults to
 `"subj_id"`.}
@@ -45,6 +49,10 @@ using `nlme::corSymm` with `visit_var` as the ordering variable. Defaults to `FA
 
 \item{powers}{Candidate powers to consider for the fractional polynomial terms.
 Defaults to `c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3)`.}
+
+\item{fp_models}{Which fractional polynomial model classes to fit:
+`"both"` (default) fits both FP1 and FP2 models, while `"fp1"` fits only
+one-term FP1 models.}
 
 \item{random_intercept_only}{Logical; if `TRUE`, fits models with random intercepts
 only. If `FALSE`, random slopes for the fractional polynomial terms are also fitted.}
@@ -74,14 +82,17 @@ A list containing:
   \itemize{
     \item{centering\_mode}{The centering strategy that was applied ("none", "ratio", or "sd").}
     \item{centering\_value}{The divisor used for ratio or SD scaling (or `NA\_real\_` when raw ages are used).}
+    \item{fp\_models}{The fitted fractional polynomial model classes ("both" or "fp1").}
     \item{predictor\_variable}{The name of the transformed age column used in the models.}
     \item{results}{For each outcome variable, a list with a tidy summary of fit statistics and optionally the fitted models.}
   }
 }
 \description{
 Fits first- and second-order fractional polynomial mixed-effects models for one or more
-outcome variables. The function returns fit statistics that support selecting the most
-appropriate model structure while offering optional scaling of the age variable.
+outcome variables. By default both FP1 and FP2 model classes are evaluated, but you can
+restrict fitting to FP1 models only. The function returns fit statistics that support
+selecting the most appropriate model structure while offering optional scaling of the
+age variable.
 }
 \examples{
 \dontrun{
@@ -92,6 +103,35 @@ mmfp\_results <- mmfp(
   id\_var = "subj\_id",
   visit\_var = "visit"
 )
+
+# Fit only one-term fractional polynomial (FP1) models
+mmfp\_results\_fp1 <- mmfp(
+  data = demo\_data,
+  outcome\_vars = c("roi\_volume"),
+  age\_var = "age",
+  fp\_models = "fp1",
+  id\_var = "subj\_id",
+  visit\_var = "visit"
+)
+
+# Interactions with FP terms using shorthand
+# If your data contain a grouping variable like 'diagnosis', you can request
+# interactions with the FP terms by supplying a character shorthand such as
+# "*diagnosis". FP1 models will include .fp1*diagnosis, while FP2 models will
+# include both .fp1*diagnosis and .fp2*diagnosis.
+mmfp\_results\_int <- mmfp(
+  data = demo\_data,
+  outcome\_vars = c("roi\_volume"),
+  age\_var = "age",
+  static\_formula = "*diagnosis",
+  id\_var = "subj\_id",
+  visit\_var = "visit"
+)
+
+# Alternatively, you can specify explicit interactions in a one-sided formula
+# using the internal .fp1/.fp2 placeholders, for example:
+#   static_formula = ~ .fp1*diagnosis + .fp2*diagnosis
+# The shorthand is recommended for convenience.
 }
 
 }

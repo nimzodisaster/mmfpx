@@ -49,8 +49,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -61,7 +62,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -353,7 +354,10 @@ random-effects models. By default it keeps the raw age scale (after
 verifying all ages are strictly positive), but you can optionally
 request ratio scaling via <code>centering = &quot;ratio&quot;</code> or
 variance-stabilising scaling with <code>centering = &quot;sd&quot;</code>, which
-divides age by its sample standard deviation without recentering.</p>
+divides age by its sample standard deviation without recentering. By
+default <code>mmfp()</code> evaluates both one-term (FP1) and two-term
+(FP2) models; set <code>fp_models = &quot;fp1&quot;</code> when you only want
+one-term candidates.</p>
 <p><code>normbytcv()</code> rescales regions of interest against a
 reference volume to remove global size effects. It addresses the need to
 compare baseline scans from subjects with different head sizes or tissue
@@ -404,12 +408,66 @@ structure.</p>
 <span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 3 volumeA FP2_1_1     FP2        1     1     -2916.    5833. 5843. 5864.</span></span>
 <span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; 4 volumeA FP2_log_1   FP2        log   1     -2917.    5833. 5843. 5865.</span></span>
 <span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; 5 volumeA FP2_log_log FP2        log   log   -2917.    5834. 5844. 5865.</span></span></code></pre></div>
+<p>To fit only one-term fractional polynomial models, set
+<code>fp_models = &quot;fp1&quot;</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>fp_results_fp1_only <span class="ot">&lt;-</span> <span class="fu">mmfp</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">data =</span> simulated_longitudinal_data,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">outcome_vars =</span> <span class="st">&quot;volumeA&quot;</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">age_var =</span> <span class="st">&quot;age&quot;</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">id_var =</span> <span class="st">&quot;subj_id&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">visit_var =</span> <span class="st">&quot;visit&quot;</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">powers =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="dv">1</span>),</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">fp_models =</span> <span class="st">&quot;fp1&quot;</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">keep_models =</span> <span class="cn">FALSE</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>fp_results_fp1_only<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>summary</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 9</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;   outcome model_id model_type p1    p2    logLik deviance   AIC   BIC</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log  FP1        log   &lt;NA&gt;  -2917.    5834. 5842. 5859.</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1    FP1        1     &lt;NA&gt;  -2926.    5852. 5860. 5877.</span></span></code></pre></div>
 <p>The summary table includes log-likelihood, deviance, AIC, and BIC
 values for each fitted model, helping identify transformations that best
 capture the non-linear age relationship in the outcome of interest. If
 you encounter convergence challenges or want more interpretable random
 effect variances, set <code>centering = &quot;sd&quot;</code> to divide age by its
 standard deviation before estimating the candidate models.</p>
+<div id="interacting-fp-terms-with-a-covariate" class="section level3">
+<h3>Interacting FP terms with a covariate</h3>
+<p>You can include interactions between the fractional polynomial (FP)
+terms and another covariate using a shorthand in
+<code>static_formula</code>. For example, to allow different FP
+trajectories by <code>diagnosis</code>, supply <code>&quot;*diagnosis&quot;</code>
+as a character string:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fp_results_interact <span class="ot">&lt;-</span> <span class="fu">mmfp</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">data =</span> simulated_longitudinal_data,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">outcome_vars =</span> <span class="st">&quot;volumeA&quot;</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">age_var =</span> <span class="st">&quot;age&quot;</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">id_var =</span> <span class="st">&quot;subj_id&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">visit_var =</span> <span class="st">&quot;visit&quot;</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">static_formula =</span> <span class="st">&quot;*diagnosis&quot;</span>,  <span class="co"># expands to .fp1*diagnosis (+ .fp2*diagnosis)</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">powers =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="dv">1</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">keep_models =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>)</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>fp_results_interact<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>summary</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; # A tibble: 5 × 9</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   outcome model_id    model_type p1    p2    logLik deviance   AIC   BIC</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log     FP1        log   &lt;NA&gt;  -2900.    5800. 5812. 5838.</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1       FP1        1     &lt;NA&gt;  -2909.    5819. 5831. 5857.</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 3 volumeA FP2_1_1     FP2        1     1     -2899.    5798. 5814. 5849.</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 4 volumeA FP2_log_log FP2        log   log   -2899.    5799. 5815. 5849.</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 5 volumeA FP2_log_1   FP2        log   1     -2900.    5799. 5815. 5850.</span></span></code></pre></div>
+<p>In FP1 models, the shorthand adds <code>.fp1*diagnosis</code>. In FP2
+models it adds both <code>.fp1*diagnosis</code> and
+<code>.fp2*diagnosis</code>. You can mix shorthand with additional
+additive terms, e.g. <code>static_formula = &quot;*diagnosis + visit&quot;</code>
+to also include a main effect of <code>visit</code>.</p>
+</div>
 </div>
 <div id="normalising-volumes-with-normbytcv" class="section level2">
 <h2>Normalising volumes with <code>normbytcv</code></h2>
@@ -418,54 +476,54 @@ measure using the <code>normbytcv()</code> function. The example below
 keeps only the first visit per participant and adjusts
 <code>volumeA</code> for its non-linear association with
 <code>volumeB</code>.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>baseline_data <span class="ot">&lt;-</span> simulated_longitudinal_data[</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  simulated_longitudinal_data<span class="sc">$</span>visit <span class="sc">==</span> <span class="dv">1</span>,</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  ,</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  drop <span class="ot">=</span> <span class="cn">FALSE</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>]</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>norm_results <span class="ot">&lt;-</span> <span class="fu">normbytcv</span>(</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">data =</span> baseline_data,</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">TBV_var =</span> <span class="st">&quot;volumeB&quot;</span>,</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">ROI_vars =</span> <span class="st">&quot;volumeA&quot;</span>,</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">subject_id_vars =</span> <span class="st">&quot;subj_id&quot;</span>,</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  <span class="at">powers_set =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="fl">0.5</span>, <span class="dv">1</span>),</span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>  <span class="at">proportion =</span> <span class="fl">0.75</span>,</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="at">num_cores =</span> <span class="dv">1</span>,</span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>  <span class="at">plot_models =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>  <span class="at">save_results =</span> <span class="cn">FALSE</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>)</span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>purrr<span class="sc">::</span><span class="fu">map_dfr</span>(</span>
-<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  norm_results<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>filtered_models,</span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="sc">~</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
-<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>    <span class="at">model_type =</span> .x<span class="sc">$</span>model_type,</span>
-<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>    <span class="at">p1 =</span> .x<span class="sc">$</span>powers<span class="sc">$</span>p1,</span>
-<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a>    <span class="at">p2 =</span> .x<span class="sc">$</span>powers<span class="sc">$</span>p2,</span>
-<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a>    <span class="at">AIC =</span> .x<span class="sc">$</span>model_aic</span>
-<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a>  )</span>
-<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a>)</span>
-<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; # A tibble: 7 × 4</span></span>
-<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;   model_type p1    p2      AIC</span></span>
-<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt;</span></span>
-<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; 1 FP1        1     &lt;NA&gt;  2086.</span></span>
-<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; 2 FP2        log   0.5   2086.</span></span>
-<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; 3 FP2        log   1     2086.</span></span>
-<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; 4 FP2        0.5   1     2086.</span></span>
-<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; 5 FP2        log   log   2086.</span></span>
-<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; 6 FP2        0.5   0.5   2086.</span></span>
-<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; 7 FP2        1     1     2086.</span></span>
-<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a></span>
-<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="fu">head</span>(norm_results<span class="sc">$</span>adjusted_volumes)</span>
-<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 2</span></span>
-<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt;   subj_id volumeA_adj</span></span>
-<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt;     &lt;int&gt;       &lt;dbl&gt;</span></span>
-<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt; 1       1       1523.</span></span>
-<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="co">#&gt; 2       2       1537.</span></span>
-<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; 3       3       1642.</span></span>
-<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt; 4       4       1587.</span></span>
-<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt; 5       5       1589.</span></span>
-<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt; 6       6       1597.</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>baseline_data <span class="ot">&lt;-</span> simulated_longitudinal_data[</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  simulated_longitudinal_data<span class="sc">$</span>visit <span class="sc">==</span> <span class="dv">1</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  ,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  drop <span class="ot">=</span> <span class="cn">FALSE</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>]</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>norm_results <span class="ot">&lt;-</span> <span class="fu">normbytcv</span>(</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">data =</span> baseline_data,</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">TBV_var =</span> <span class="st">&quot;volumeB&quot;</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="at">ROI_vars =</span> <span class="st">&quot;volumeA&quot;</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">subject_id_vars =</span> <span class="st">&quot;subj_id&quot;</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">powers_set =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="fl">0.5</span>, <span class="dv">1</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="at">proportion =</span> <span class="fl">0.75</span>,</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="at">num_cores =</span> <span class="dv">1</span>,</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  <span class="at">plot_models =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  <span class="at">save_results =</span> <span class="cn">FALSE</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>)</span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>purrr<span class="sc">::</span><span class="fu">map_dfr</span>(</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>  norm_results<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>filtered_models,</span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>  <span class="sc">~</span> tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>    <span class="at">model_type =</span> .x<span class="sc">$</span>model_type,</span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>    <span class="at">p1 =</span> .x<span class="sc">$</span>powers<span class="sc">$</span>p1,</span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>    <span class="at">p2 =</span> .x<span class="sc">$</span>powers<span class="sc">$</span>p2,</span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>    <span class="at">AIC =</span> .x<span class="sc">$</span>model_aic</span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>  )</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>)</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; # A tibble: 7 × 4</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt;   model_type p1    p2      AIC</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt;</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; 1 FP1        1     &lt;NA&gt;  2086.</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; 2 FP2        log   0.5   2086.</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; 3 FP2        log   1     2086.</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; 4 FP2        0.5   1     2086.</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; 5 FP2        log   log   2086.</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; 6 FP2        0.5   0.5   2086.</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; 7 FP2        1     1     2086.</span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="fu">head</span>(norm_results<span class="sc">$</span>adjusted_volumes)</span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 2</span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt;   subj_id volumeA_adj</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt;     &lt;int&gt;       &lt;dbl&gt;</span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; 1       1       1523.</span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt; 2       2       1537.</span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; 3       3       1642.</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt; 4       4       1587.</span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; 5       5       1589.</span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt; 6       6       1597.</span></span></code></pre></div>
 <p>The resulting list contains adjusted ROI values and information about
 the fractional polynomial models that were retained after applying the
 bagging criterion.</p>
