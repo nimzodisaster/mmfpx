@@ -15,14 +15,16 @@ brms_mmfp(
   rescor = TRUE,
   center = c("none", "ratio", "sd"),
   center_value = NULL,
-  family = gaussian(),
-  prior = c(prior(normal(0, 1), class = "b"), prior(exponential(1), class = "sd"),
-    prior(exponential(1), class = "sigma"), prior(lkj(2), class = "cor")),
+  family = stats::gaussian(),
+  prior = c(brms::prior("normal(0,1)", class = "b"), brms::prior("exponential(1)",
+    class = "sd"), brms::prior("exponential(1)", class = "sigma"),
+    brms::prior("lkj(2)", class = "cor")),
   chains = 4,
   cores = 4,
   iter = 4000,
   seed = 2025,
   control = list(adapt_delta = 0.95, max_treedepth = 12),
+  backend = c("cmdstanr", "rstan"),
   criteria = c("loo", "waic"),
   select_by = c("looic", "waic"),
   drop_bad = TRUE,
@@ -45,20 +47,25 @@ Example: "(1 + {fp_terms} | ID)" or "(1 + {fp_terms} | gr(ID, by = MAR))".}
 \item{powers}{Numeric/character vector of FP powers to try. Use 0 or "log" for log.
 Default: c(-2,-1,-0.5,0,0.5,1,2).}
 
-\item{order}{Integer 1 or 2. If 2, tries all FP2 pairs incl. repeats (Royston–Sauerbrei).}
+\item{order}{Integer 1 or 2. If 2, tries all unique unordered FP2 pairs
+including repeats (Royston-Sauerbrei).}
 
-\item{rescor}{Logical; `set_rescor(TRUE)` for residual correlation across outcomes.}
+\item{rescor}{Logical; `set_rescor(TRUE)` for residual correlation across outcomes.
+Residual correlations are supported for gaussian families; set \code{rescor = FALSE}
+for non-gaussian families.}
 
 \item{center}{One of c("none","ratio","sd"). If "ratio", divide by \code{center_value}
 (default = mean(age)); if "sd", divide by sd(age).}
 
 \item{center_value}{Optional positive divisor when \code{center="ratio"}.}
 
-\item{family}{brms family (default gaussian()).}
+\item{family}{brms family (default \code{stats::gaussian()}).}
 
 \item{prior}{brms prior specification (vector). Mild regularization is recommended.}
 
 \item{chains, cores, iter, seed, control}{brms sampling controls.}
+
+\item{backend}{brms backend, either \code{"cmdstanr"} or \code{"rstan"}.}
 
 \item{criteria}{Character vector among c("loo","waic"). Default c("loo","waic").}
 

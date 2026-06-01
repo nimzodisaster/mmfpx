@@ -11,3 +11,4 @@
 #usethis::use_package("utils", type = "Imports")
 #usethis::use_package("nlme", type = "Imports")
 #usethis::use_package("lme4", type = "Imports")
+#usethis::use_package("loo", type = "Imports")

@@ -25,7 +25,8 @@ Imports:
     tibble,
     utils,
     nlme,
-    lme4
+    lme4,
+    loo
 RoxygenNote: 7.2.3
 Suggests: 
     testthat (>= 3.0.0),

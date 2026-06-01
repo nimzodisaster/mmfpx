@@ -14,14 +14,18 @@
 #'   Example: "(1 + {fp_terms} | ID)" or "(1 + {fp_terms} | gr(ID, by = MAR))".
 #' @param powers Numeric/character vector of FP powers to try. Use 0 or "log" for log.
 #'   Default: c(-2,-1,-0.5,0,0.5,1,2).
-#' @param order Integer 1 or 2. If 2, tries all FP2 pairs incl. repeats (Royston–Sauerbrei).
+#' @param order Integer 1 or 2. If 2, tries all unique unordered FP2 pairs
+#'   including repeats (Royston-Sauerbrei).
 #' @param rescor Logical; `set_rescor(TRUE)` for residual correlation across outcomes.
+#'   Residual correlations are supported for gaussian families; set \code{rescor = FALSE}
+#'   for non-gaussian families.
 #' @param center One of c("none","ratio","sd"). If "ratio", divide by \code{center_value}
 #'   (default = mean(age)); if "sd", divide by sd(age).
 #' @param center_value Optional positive divisor when \code{center="ratio"}.
-#' @param family brms family (default gaussian()).
+#' @param family brms family (default \code{stats::gaussian()}).
 #' @param prior brms prior specification (vector). Mild regularization is recommended.
 #' @param chains,cores,iter,seed,control brms sampling controls.
+#' @param backend brms backend, either \code{"cmdstanr"} or \code{"rstan"}.
 #' @param criteria Character vector among c("loo","waic"). Default c("loo","waic").
 #' @param select_by One of c("looic","waic"). Primary selector. Default "looic".
 #' @param drop_bad Logical; if TRUE, models with max Rhat>1.01 or min ESS ratio<0.1
@@ -61,6 +65,8 @@
 #' }
 #' @import brms dplyr purrr tibble
 #' @importFrom stats as.formula sd terms model.matrix
+#' @importFrom utils combn
+#' @importFrom loo pareto_k_values
 #' @export
 brms_mmfp <- function(
   data,
@@ -73,13 +79,14 @@ brms_mmfp <- function(
   rescor = TRUE,
   center = c("none","ratio","sd"),
   center_value = NULL,
-  family = gaussian(),
-  prior = c(prior(normal(0,1), class="b"),
-            prior(exponential(1), class="sd"),
-            prior(exponential(1), class="sigma"),
-            prior(lkj(2), class="cor")),
+  family = stats::gaussian(),
+  prior = c(brms::prior("normal(0,1)", class="b"),
+            brms::prior("exponential(1)", class="sd"),
+            brms::prior("exponential(1)", class="sigma"),
+            brms::prior("lkj(2)", class="cor")),
   chains = 4, cores = 4, iter = 4000, seed = 2025,
   control = list(adapt_delta = 0.95, max_treedepth = 12),
+  backend = c("cmdstanr","rstan"),
   criteria = c("loo","waic"),
   select_by = c("looic","waic"),
   drop_bad = TRUE,
@@ -98,8 +105,14 @@ brms_mmfp <- function(
   if (any(a <= 0, na.rm=TRUE)) stop("All age values must be strictly positive for FP transforms.")
 
   center <- match.arg(center)
+  backend <- match.arg(backend)
   select_by <- match.arg(select_by)
   criteria <- intersect(criteria, c("loo","waic"))
+
+  family_name <- if (is.character(family)) family else family$family
+  if (isTRUE(rescor) && !identical(family_name, "gaussian")) {
+    stop("rescor = TRUE is only supported for gaussian families; set rescor = FALSE for non-gaussian families.")
+  }
 
   # scale age if requested
   if (center == "ratio") {
@@ -121,23 +134,36 @@ brms_mmfp <- function(
   df0[[".age_"]] <- age_scaled
 
   # FP helpers
+  format_power <- function(p) {
+    p_chr <- as.character(p)
+    if (tolower(p_chr) == "log") return("log")
+    p_num <- suppressWarnings(as.numeric(p_chr))
+    if (!is.na(p_num) && isTRUE(all.equal(p_num, 0))) return("log")
+    p_chr
+  }
   to_num_power <- function(p) {
-    if (is.character(p) && tolower(p) == "log") 0 else as.numeric(p)
+    p_fmt <- format_power(p)
+    if (p_fmt == "log") 0 else as.numeric(p_fmt)
   }
   fp1_transform <- function(x, p) if (isTRUE(all.equal(p,0))) log(x) else x^p
-  # FP2: repeated powers use fp2 = fp1 * log(x)
+  # Repeated-power FP2 second term is x^p * log(x), per Royston and Altman.
   fp2_transform <- function(x, p1, p2, fp1) {
     if (isTRUE(all.equal(p1, p2))) fp1 * log(x) else fp1_transform(x, p2)
   }
 
   make_fp_grid <- function(powers, order=1L){
-    P <- unique(powers)
+    P <- unique(vapply(powers, format_power, character(1)))
     if (order == 1L) {
-      tibble::tibble(order=1L, p1 = P, p2 = NA_real_)
+      tibble::tibble(order=1L, p1 = P, p2 = NA_character_)
     } else {
-      # all ordered pairs incl. repeats
-      pairs <- as.matrix(expand.grid(P, P, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE))
-      tibble::tibble(order=2L, p1 = pairs[,1], p2 = pairs[,2])
+      repeated_pairs <- lapply(P, function(p) c(p, p))
+      distinct_pairs <- if (length(P) > 1L) utils::combn(P, 2L, simplify = FALSE) else list()
+      pairs <- c(repeated_pairs, distinct_pairs)
+      tibble::tibble(
+        order=2L,
+        p1 = vapply(pairs, `[[`, character(1), 1L),
+        p2 = vapply(pairs, `[[`, character(1), 2L)
+      )
     }
   }
   grid <- make_fp_grid(powers, order)
@@ -186,8 +212,9 @@ brms_mmfp <- function(
       family = family,
       prior = prior,
       chains = chains, cores = cores, iter = iter, seed = seed,
-      backend = "cmdstanr",
-      control = control
+      backend = backend,
+      control = control,
+      save_pars = brms::save_pars(all = TRUE)
     )
 
     # add criteria
@@ -230,7 +257,10 @@ brms_mmfp <- function(
       tab$looic[i]   <- fit$criteria$loo$est["looic"]
       tab$elpd_loo[i] <- fit$criteria$loo$est["elpd_loo"]
       # summarize any Pareto-k problems
-      bad_k <- fit$criteria$loo$diagnostics[["Pareto k"]]
+      bad_k <- tryCatch(loo::pareto_k_values(fit$criteria$loo), error = function(e) NULL)
+      if (is.null(bad_k)) {
+        bad_k <- fit$criteria$loo$diagnostics[["Pareto k"]]
+      }
       if (!is.null(bad_k) && any(bad_k > 0.7, na.rm=TRUE)) {
         tab$loo_warn[i] <- sprintf("k>0.7 in %d points", sum(bad_k > 0.7, na.rm=TRUE))
       } else tab$loo_warn[i] <- ""
@@ -241,25 +271,32 @@ brms_mmfp <- function(
     }
 
     # drop_bad option
-    if (drop_bad && (is.finite(rhat_max) && rhat_max > 1.01 || is.finite(neff_min) && neff_min < 0.1)) {
+    bad_rhat <- is.finite(rhat_max) && rhat_max > 1.01
+    bad_neff <- is.finite(neff_min) && neff_min < 0.1
+    if (drop_bad && (bad_rhat || bad_neff)) {
       tab$eligible[i] <- FALSE
     }
   }
 
   # Choose winner
+  winner_idx <- NA_integer_
   if (select_by == "looic" && any(is.finite(tab$looic))) {
     pool <- ifelse(tab$eligible, tab$looic, Inf)
-    winner_idx <- which.min(pool)
+    candidate_idx <- which.min(pool)
+    if (length(candidate_idx) == 1L && is.finite(pool[candidate_idx])) {
+      winner_idx <- candidate_idx
+    }
   } else if (any(is.finite(tab$waic))) {
     pool <- ifelse(tab$eligible, tab$waic, Inf)
-    winner_idx <- which.min(pool)
-  } else {
-    winner_idx <- NA_integer_
+    candidate_idx <- which.min(pool)
+    if (length(candidate_idx) == 1L && is.finite(pool[candidate_idx])) {
+      winner_idx <- candidate_idx
+    }
   }
 
   tab$winner <- FALSE
   best_fit <- NULL
-  if (is.finite(winner_idx)) {
+  if (!is.na(winner_idx)) {
     tab$winner[winner_idx] <- TRUE
     best_fit <- fits[[winner_idx]]
   }
@@ -271,12 +308,13 @@ brms_mmfp <- function(
       center = center,
       center_value = center_val_used,
       rescor = rescor,
+      backend = backend,
       powers = powers,
       order = order,
       select_by = select_by,
       drop_bad = drop_bad
     ),
-    table = tab |> dplyr::arrange(dplyr::desc(winner), !!dplyr::sym(select_by)),
+    table = tab |> dplyr::arrange(dplyr::desc(.data$winner), !!dplyr::sym(select_by)),
     best  = best_fit,
     fits  = if (keep_models) stats::setNames(fits, paste0("ord",grid$order,"_p1",grid$p1,"_p2",grid$p2)) else NULL
   )
