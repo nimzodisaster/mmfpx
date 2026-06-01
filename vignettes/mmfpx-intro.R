@@ -19,11 +19,12 @@ fp_results <- mmfp(
   id_var = "subj_id",
   visit_var = "visit",
   powers = c("log", 1),
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results$results$volumeA$summary
+
+fp_results$results$volumeA$selection_summary
 
 ## -----------------------------------------------------------------------------
 fp_results_fp1_only <- mmfp(
@@ -34,8 +35,7 @@ fp_results_fp1_only <- mmfp(
   visit_var = "visit",
   powers = c("log", 1),
   fp_models = "fp1",
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_fp1_only$results$volumeA$summary
@@ -49,8 +49,7 @@ fp_results_fp2_only <- mmfp(
   visit_var = "visit",
   powers = c("log", 1),
   fp_models = "fp2",
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_fp2_only$results$volumeA$summary
@@ -64,8 +63,7 @@ fp_results_interact <- mmfp(
   visit_var = "visit",
   static_formula = "*diagnosis",  # expands to .fp1*diagnosis (+ .fp2*diagnosis)
   powers = c("log", 1),
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_interact$results$volumeA$summary

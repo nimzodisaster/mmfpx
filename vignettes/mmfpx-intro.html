@@ -396,19 +396,14 @@ structure.</p>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">id_var =</span> <span class="st">&quot;subj_id&quot;</span>,</span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">visit_var =</span> <span class="st">&quot;visit&quot;</span>,</span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">powers =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="dv">1</span>),</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">keep_models =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span></span>
 <span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
 <span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
 <span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>fp_results<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>summary</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; # A tibble: 5 × 9</span></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;   outcome model_id    model_type p1    p2    logLik deviance   AIC   BIC</span></span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log     FP1        log   &lt;NA&gt;  -2917.    5834. 5842. 5859.</span></span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1       FP1        1     &lt;NA&gt;  -2926.    5852. 5860. 5877.</span></span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt; 3 volumeA FP2_1_1     FP2        1     1     -2916.    5833. 5843. 5864.</span></span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; 4 volumeA FP2_log_1   FP2        log   1     -2917.    5833. 5843. 5865.</span></span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; 5 volumeA FP2_log_log FP2        log   log   -2917.    5834. 5844. 5865.</span></span></code></pre></div>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt; # A tibble with logLik, AIC, BIC, delta_AIC, evidence_ratio, weight, converged, and singular columns</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>fp_results<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>selection_summary</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt; # A tibble with best_model_id, best_weight, n_models_within_2, and weight_concentration columns</span></span></code></pre></div>
 <p>To fit only one-term fractional polynomial models, set
 <code>fp_models = &quot;fp1&quot;</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>fp_results_fp1_only <span class="ot">&lt;-</span> <span class="fu">mmfp</span>(</span>
@@ -419,21 +414,19 @@ structure.</p>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">visit_var =</span> <span class="st">&quot;visit&quot;</span>,</span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">powers =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="dv">1</span>),</span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">fp_models =</span> <span class="st">&quot;fp1&quot;</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">keep_models =</span> <span class="cn">FALSE</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>)</span>
 <span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>fp_results_fp1_only<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>summary</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; # A tibble: 2 × 9</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;   outcome model_id model_type p1    p2    logLik deviance   AIC   BIC</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log  FP1        log   &lt;NA&gt;  -2917.    5834. 5842. 5859.</span></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1    FP1        1     &lt;NA&gt;  -2926.    5852. 5860. 5877.</span></span></code></pre></div>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; # A tibble with logLik, AIC, BIC, delta_AIC, evidence_ratio, weight, converged, and singular columns</span></span></code></pre></div>
 <p>To fit only two-term fractional polynomial models, set
 <code>fp_models = &quot;fp2&quot;</code>.</p>
-<p>The summary table includes log-likelihood, deviance, AIC, and BIC
-values for each fitted model, helping identify transformations that best
-capture the non-linear age relationship in the outcome of interest. If
+<p>The summary table includes log-likelihood, AIC, BIC,
+<code>delta_AIC</code>, Akaike weights, evidence ratios, convergence, and
+singular-fit indicators for each fitted model. Weights are relative support
+within the fitted candidate set, not probabilities that a model is correct. The
+selection summary gives a compact view of whether the winning model is clearly
+separated from nearby candidates. If
 you encounter convergence challenges or want more interpretable random
 effect variances, set <code>centering = &quot;sd&quot;</code> to divide age by its
 standard deviation before estimating the candidate models.</p>
@@ -452,19 +445,11 @@ as a character string:</p>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">visit_var =</span> <span class="st">&quot;visit&quot;</span>,</span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">static_formula =</span> <span class="st">&quot;*diagnosis&quot;</span>,  <span class="co"># expands to .fp1*diagnosis (+ .fp2*diagnosis)</span></span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">powers =</span> <span class="fu">c</span>(<span class="st">&quot;log&quot;</span>, <span class="dv">1</span>),</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">keep_models =</span> <span class="cn">FALSE</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">random_intercept_only =</span> <span class="cn">TRUE</span></span>
 <span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>)</span>
 <span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a></span>
 <span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>fp_results_interact<span class="sc">$</span>results<span class="sc">$</span>volumeA<span class="sc">$</span>summary</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; # A tibble: 5 × 9</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   outcome model_id    model_type p1    p2    logLik deviance   AIC   BIC</span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log     FP1        log   &lt;NA&gt;  -2900.    5800. 5812. 5838.</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1       FP1        1     &lt;NA&gt;  -2909.    5819. 5831. 5857.</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 3 volumeA FP2_1_1     FP2        1     1     -2899.    5798. 5814. 5849.</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 4 volumeA FP2_log_log FP2        log   log   -2899.    5799. 5815. 5849.</span></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 5 volumeA FP2_log_1   FP2        log   1     -2900.    5799. 5815. 5850.</span></span></code></pre></div>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; # A tibble with logLik, AIC, BIC, delta_AIC, evidence_ratio, weight, converged, and singular columns</span></span></code></pre></div>
 <p>In FP1 models, the shorthand adds <code>.fp1*diagnosis</code>. In FP2
 models it adds both <code>.fp1*diagnosis</code> and
 <code>.fp2*diagnosis</code>. You can mix shorthand with additional

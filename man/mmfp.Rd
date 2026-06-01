@@ -11,15 +11,14 @@ mmfp(
   static_formula = NULL,
   id_var = "subj_id",
   visit_var = "visit",
+  engine = c("nlme", "lme4", "lm"),
   correlation = FALSE,
   powers = c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3),
   fp_models = c("both", "fp1", "fp2"),
   random_intercept_only = FALSE,
   centering = c("none", "ratio", "sd"),
   centering_value = NULL,
-  method = c("ML", "REML"),
   control = NULL,
-  keep_models = FALSE,
   verbose = FALSE
 )
 }
@@ -39,13 +38,23 @@ fractional polynomial terms with `var`. For example, `"*sex"` yields
 `~ .fp1*sex` for FP1 models and `~ .fp1*sex + .fp2*sex` for FP2 models.}
 
 \item{id_var}{Subject identifier used for the random-effects structure. Defaults to
-`"subj_id"`.}
+`"subj_id"`. Not used with `engine = "lm"`; supplying it explicitly with
+`engine = "lm"` is an error.}
 
 \item{visit_var}{Visit (or time) variable used when estimating within-subject
-correlation structures. Defaults to `"visit"`.}
+correlation structures. Defaults to `"visit"`. Not used with `engine = "lm"`;
+supplying it explicitly with `engine = "lm"` is an error.}
+
+\item{engine}{Model-fitting backend to use: `"nlme"` (default), `"lme4"`,
+or `"lm"`. `engine = "lm"` fits ordinary linear models via `stats::lm`
+for cross-sectional or non-clustered data with no random effects. It treats
+all rows as independent and is not appropriate for longitudinal or repeated-
+measures data where repeated observations per subject violate independence.}
 
 \item{correlation}{Logical; if `TRUE`, a symmetric correlation structure is included
-using `nlme::corSymm` with `visit_var` as the ordering variable. Defaults to `FALSE`.}
+using `nlme::corSymm` with `visit_var` as the ordering variable. This option
+is only supported with `engine = "nlme"` and errors for `engine = "lme4"` or
+`engine = "lm"`. Defaults to `FALSE`.}
 
 \item{powers}{Candidate powers to consider for the fractional polynomial terms.
 Defaults to `c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3)`.}
@@ -55,36 +64,55 @@ Defaults to `c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3)`.}
 one-term FP1 models, and `"fp2"` fits only two-term FP2 models.}
 
 \item{random_intercept_only}{Logical; if `TRUE`, fits models with random intercepts
-only. If `FALSE`, random slopes for the fractional polynomial terms are also fitted.}
+only. If `FALSE`, random slopes for the fractional polynomial terms are also fitted.
+Not meaningful with `engine = "lm"` because ordinary linear models have no
+random effects; `random_intercept_only = TRUE` errors with `engine = "lm"`.}
 
-\item{centering}{The scaling strategy for the age variable. Use `"none"` to keep
+\item{centering}{The scaling strategy for the age variable. Despite the argument
+name, these options scale but do not mean-center `age_var`. Use `"none"` to keep
 raw values (default), `"ratio"` to divide `age_var` by `centering_value`, or
-`"sd"` to divide by the sample standard deviation of `age_var` without
-recentering.}
+`"sd"` to divide by the sample standard deviation of `age_var`.}
 
 \item{centering_value}{Optional positive value used for ratio scaling. When `NULL`,
 the mean of `age_var` is used. Only relevant when `centering = "ratio"` and
 ignored otherwise.}
 
-\item{method}{Estimation method passed to `nlme::lme`. Defaults to `"ML"`.}
-
-\item{control}{Optional control object created with `nlme::lmeControl`. When `NULL`,
-a control configuration with increased iteration limits is used.}
-
-\item{keep_models}{Logical; if `TRUE`, fitted model objects are returned. Defaults to
-`FALSE` to reduce memory usage.}
+\item{control}{Optional control object passed to the selected engine. For
+`engine = "nlme"`, supply an object from `nlme::lmeControl`; for
+`engine = "lme4"`, supply an object from `lme4::lmerControl`. When `NULL`,
+engine-specific defaults are used. `engine = "lm"` takes no control object,
+so non-NULL `control` is an error. User-supplied control objects are passed
+through unvalidated for mixed-model engines.}
 
 \item{verbose}{Logical; if `TRUE`, progress messages are printed for models that
 fail to converge.}
 }
 \value{
 A list containing:
-  \itemize{
-    \item{centering\_mode}{The centering strategy that was applied ("none", "ratio", or "sd").}
+  \describe{
+    \item{engine}{The backend used to fit the models ("nlme", "lme4", or "lm").}
+    \item{centering\_mode}{The scaling strategy that was applied ("none", "ratio", or "sd").}
     \item{centering\_value}{The divisor used for ratio or SD scaling (or `NA\_real\_` when raw ages are used).}
     \item{fp\_models}{The fitted fractional polynomial model classes ("both", "fp1", or "fp2").}
     \item{predictor\_variable}{The name of the transformed age column used in the models.}
-    \item{results}{For each outcome variable, a list with a tidy summary of fit statistics and optionally the fitted models.}
+    \item{results}{For each outcome variable, a list containing `summary` and
+      `selection_summary`. `summary` is a tidy tibble of fit statistics with
+      `delta_AIC`, `evidence_ratio`, Akaike `weight`, and convergence and
+      singular-fit flags. Weights are relative AIC support within the fitted
+      candidate set for that outcome; they are not probabilities that a model
+      is correct and do not measure out-of-sample performance. For
+      `engine = "lme4"`, `converged` is `FALSE` when the optimizer reports a
+      nonzero return code or lme4 reports post-fit convergence messages, and
+      `singular` is computed with `lme4::isSingular()`. For `engine = "nlme"`,
+      returned fits are marked `converged = TRUE` because `nlme::lme` failures
+      are handled as errors; `singular` is `NA` because nlme does not provide
+      an equivalent singular-fit diagnostic. For `engine = "lm"`, `converged`
+      is always `TRUE` because ordinary least squares has no iterative
+      convergence check, and `singular` is `NA`; rank deficiency in `lm` fits is
+      not separately checked. `selection_summary` reports the best model, its
+      weight, the number of models with `delta_AIC <= 2`, and the summed weight
+      of those near-top models. The `delta_AIC <= 2` cutoff is a convention for
+      substantial support, not a rule.}
   }
 }
 \description{

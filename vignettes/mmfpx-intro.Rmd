@@ -63,11 +63,12 @@ fp_results <- mmfp(
   id_var = "subj_id",
   visit_var = "visit",
   powers = c("log", 1),
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results$results$volumeA$summary
+
+fp_results$results$volumeA$selection_summary
 ```
 
 To fit only one-term fractional polynomial models, set `fp_models = "fp1"`:
@@ -81,8 +82,7 @@ fp_results_fp1_only <- mmfp(
   visit_var = "visit",
   powers = c("log", 1),
   fp_models = "fp1",
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_fp1_only$results$volumeA$summary
@@ -99,16 +99,17 @@ fp_results_fp2_only <- mmfp(
   visit_var = "visit",
   powers = c("log", 1),
   fp_models = "fp2",
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_fp2_only$results$volumeA$summary
 ```
 
-The summary table includes log-likelihood, deviance, AIC, and BIC values for
-each fitted model, helping identify transformations that best capture the
-non-linear age relationship in the outcome of interest.
+The summary table includes log-likelihood, AIC, BIC, `delta_AIC`, Akaike
+weights, evidence ratios, convergence, and singular-fit indicators for each
+fitted model. Weights are relative support within the fitted candidate set, not
+probabilities that a model is correct. The selection summary gives a compact
+view of whether the winning model is clearly separated from nearby candidates.
 If you encounter convergence challenges or want more interpretable random
 effect variances, set `centering = "sd"` to divide age by its standard
 deviation before estimating the candidate models.
@@ -129,8 +130,7 @@ fp_results_interact <- mmfp(
   visit_var = "visit",
   static_formula = "*diagnosis",  # expands to .fp1*diagnosis (+ .fp2*diagnosis)
   powers = c("log", 1),
-  random_intercept_only = TRUE,
-  keep_models = FALSE
+  random_intercept_only = TRUE
 )
 
 fp_results_interact$results$volumeA$summary
