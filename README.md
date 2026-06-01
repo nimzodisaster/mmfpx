@@ -18,8 +18,6 @@ The package provides two complementary workflows:
 
 **Mixed-effects model selection (`mmfp`).** Fits a grid of first- and second-order fractional polynomial models across a set of candidate powers, for one or more outcomes, and returns fit statistics that let you select an appropriate functional form. It supports three fitting backends and reports diagnostics that tell you not just *which* model won, but *how clearly* it won.
 
-**Bagged fractional polynomial normalization (`normbytcv`).** Adjusts regional volumes for their non-linear association with total brain volume by averaging over a set of well-supported fractional polynomial models, rather than committing to a single one.
-
 ---
 
 ## Key features
@@ -110,19 +108,6 @@ mmfp(demo_data, "roi_volume", age_var = "age",
 mmfp(cross_sectional_data, "roi_volume", age_var = "age", engine = "lm")
 ```
 
-### Normalize regional volumes by total brain volume
-
-```r
-norm <- normbytcv(
-  data            = demo_data,
-  TBV_var         = "TBV",
-  ROI_vars        = c("ROI1", "ROI2"),
-  subject_id_vars = c("ID"),
-  plot_models     = TRUE
-)
-
-norm$adjusted_volumes
-```
 
 ---
 
@@ -133,10 +118,38 @@ norm$adjusted_volumes
 All models in a selection grid are fit by maximum likelihood, so their AIC/BIC values are directly comparable across the different fractional polynomial structures.
 
 ---
+## Experimental
+
+The following functions are included but should be considered **experimental** —
+their interfaces and outputs may change, and they have seen less testing than `mmfp`.
+
+### `normbytcv` — bagged fractional-polynomial volume normalization
+
+Adjusts regional brain volumes for their non-linear association with total brain
+volume by averaging the adjustments from a set of well-supported fractional
+polynomial models, rather than committing to a single fit. Models within an
+evidence threshold of the best are retained and their adjusted values combined.
+This is a functional but rough implementation: the model-averaging is currently
+equal-weighted across the retained set rather than weighted by relative support,
+and the approach assumes the volume–TBV relationship being removed is nuisance
+rather than signal — an assumption worth scrutinizing for your data, since brain
+regions and total volume share biologically meaningful variance.
+
+### `brms_mmfp` — multivariate Bayesian FP model selection
+
+Fits joint multivariate Bayesian mixed-effects models over two or more outcomes
+with fractional polynomial time terms, comparing candidate bases by PSIS-LOO and
+WAIC. Users supply templated fixed and random formulas containing a `{fp_terms}`
+token that is expanded per candidate. This is the most experimental function in
+the package: it currently selects a single winning model rather than averaging
+over candidates (LOO stacking weights are the natural next step), the default
+priors assume a correlated random-effects structure, and fitting is expensive —
+each candidate is a full MCMC run. Treat it as a starting point for Bayesian FP
+workflows rather than a finished tool.
 
 ## Roadmap
 
-Planned for a future release: a cluster (subject-level) bootstrap diagnostic that re-runs the full selection across resamples, reporting how stable the chosen powers are and how much the fitted trajectories move — the quantitative complement to the within-sample Akaike weights.
+Planned for a future release: a cluster (subject-level) bootstrap diagnostic that re-runs the full selection across resamples, reporting how stable the chosen powers are and how much the fitted trajectories move — the quantitative complement to the within-sample Akaike weights. Also continued development of normbytcv and brms_mmfp, the most experimental function under development.
 
 ---
 
