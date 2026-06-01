@@ -2,13 +2,9 @@
 
 **Fractional Polynomial Mixed-Effects Utilities**
 
-<<<<<<< HEAD
-Version: 0.4.2.1
-=======
 [![Release](https://img.shields.io/badge/release-0.6.0-blue.svg)](https://github.com/nimzodisaster/mmfpx/releases/tag/0.6.0)
 [![R](https://img.shields.io/badge/R-%E2%89%A5%204.0-276DC3.svg)](https://www.r-project.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
->>>>>>> 41827ea (Big minor update adding lme4 and lm functionality in addition to nlme, and other fixes)
 
 > Tools for exploring fractional polynomial relationships in neuroimaging and related longitudinal data.
 
@@ -16,11 +12,7 @@ Version: 0.4.2.1
 
 ---
 
-<<<<<<< HEAD
-Alpha pre-release 0.4.2.1 (https://github.com/nimzodisaster/mmfpx/tree/0.4.2.1)
-=======
 ## What it does
->>>>>>> 41827ea (Big minor update adding lme4 and lm functionality in addition to nlme, and other fixes)
 
 The package provides two complementary workflows:
 
