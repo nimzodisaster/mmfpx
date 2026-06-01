@@ -41,6 +41,21 @@ fp_results_fp1_only <- mmfp(
 fp_results_fp1_only$results$volumeA$summary
 
 ## -----------------------------------------------------------------------------
+fp_results_fp2_only <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  powers = c("log", 1),
+  fp_models = "fp2",
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_fp2_only$results$volumeA$summary
+
+## -----------------------------------------------------------------------------
 fp_results_interact <- mmfp(
   data = simulated_longitudinal_data,
   outcome_vars = "volumeA",
@@ -85,4 +100,3 @@ purrr::map_dfr(
 )
 
 head(norm_results$adjusted_volumes)
-

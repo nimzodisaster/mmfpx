@@ -2,7 +2,7 @@
 #'
 #' Fits first- and second-order fractional polynomial mixed-effects models for one or more
 #' outcome variables. By default both FP1 and FP2 model classes are evaluated, but you can
-#' restrict fitting to FP1 models only. The function returns fit statistics that support
+#' restrict fitting to either FP1 or FP2 models. The function returns fit statistics that support
 #' selecting the most appropriate model structure while offering optional scaling of the
 #' age variable.
 #'
@@ -25,8 +25,8 @@
 #' @param powers Candidate powers to consider for the fractional polynomial terms.
 #'   Defaults to `c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3)`.
 #' @param fp_models Which fractional polynomial model classes to fit:
-#'   `"both"` (default) fits both FP1 and FP2 models, while `"fp1"` fits only
-#'   one-term FP1 models.
+#'   `"both"` (default) fits both FP1 and FP2 models, `"fp1"` fits only
+#'   one-term FP1 models, and `"fp2"` fits only two-term FP2 models.
 #' @param random_intercept_only Logical; if `TRUE`, fits models with random intercepts
 #'   only. If `FALSE`, random slopes for the fractional polynomial terms are also fitted.
 #' @param centering The scaling strategy for the age variable. Use `"none"` to keep
@@ -48,7 +48,7 @@
 #'   \itemize{
 #'     \item{centering\_mode}{The centering strategy that was applied ("none", "ratio", or "sd").}
 #'     \item{centering\_value}{The divisor used for ratio or SD scaling (or `NA\_real\_` when raw ages are used).}
-#'     \item{fp\_models}{The fitted fractional polynomial model classes ("both" or "fp1").}
+#'     \item{fp\_models}{The fitted fractional polynomial model classes ("both", "fp1", or "fp2").}
 #'     \item{predictor\_variable}{The name of the transformed age column used in the models.}
 #'     \item{results}{For each outcome variable, a list with a tidy summary of fit statistics and optionally the fitted models.}
 #'   }
@@ -69,6 +69,16 @@
 #'   outcome\_vars = c("roi\_volume"),
 #'   age\_var = "age",
 #'   fp\_models = "fp1",
+#'   id\_var = "subj\_id",
+#'   visit\_var = "visit"
+#' )
+#'
+#' # Fit only two-term fractional polynomial (FP2) models
+#' mmfp\_results\_fp2 <- mmfp(
+#'   data = demo\_data,
+#'   outcome\_vars = c("roi\_volume"),
+#'   age\_var = "age",
+#'   fp\_models = "fp2",
 #'   id\_var = "subj\_id",
 #'   visit\_var = "visit"
 #' )
@@ -103,7 +113,7 @@
 mmfp <- function (data, outcome_vars, age_var = "age", static_formula = NULL,
                   id_var = "subj_id", visit_var = "visit", correlation = FALSE,
                   powers = c(-3, -2, -1, -0.5, "log", 0.5, 1, 2, 3),
-                  fp_models = c("both", "fp1"), random_intercept_only = FALSE,
+                  fp_models = c("both", "fp1", "fp2"), random_intercept_only = FALSE,
                   centering = c("none", "ratio", "sd"), centering_value = NULL,
                   method = c("ML", "REML"), control = NULL, keep_models = FALSE,
                   verbose = FALSE)
@@ -345,29 +355,35 @@ mmfp <- function (data, outcome_vars, age_var = "age", static_formula = NULL,
       NULL
     })
   }
-  fp2_combinations <- utils::combn(powers, 2, simplify = FALSE)
+  fp2_combinations <- if (length(powers) >= 2) {
+    utils::combn(powers, 2, simplify = FALSE)
+  } else {
+    list()
+  }
   fp2_combinations <- c(fp2_combinations, lapply(powers, function(p) c(p,
                                                                        p)))
   outcome_results <- purrr::map(outcome_vars, function(outcome) {
     summaries <- list()
     models <- list()
-    for (p in powers) {
-      model <- fit_single_model(data_model, outcome, p)
-      if (is.null(model)) {
-        next
+    if (fp_models %in% c("both", "fp1")) {
+      for (p in powers) {
+        model <- fit_single_model(data_model, outcome, p)
+        if (is.null(model)) {
+          next
+        }
+        model_id <- paste0("FP1_", format_power(p))
+        if (keep_models) {
+          models[[model_id]] <- model
+        }
+        model_summary <- dplyr::tibble(outcome = outcome,
+                                       model_id = model_id, model_type = "FP1", p1 = format_power(p),
+                                       p2 = NA_character_, logLik = as.numeric(stats::logLik(model)),
+                                       deviance = -2 * as.numeric(stats::logLik(model)),
+                                       AIC = stats::AIC(model), BIC = stats::BIC(model))
+        summaries[[length(summaries) + 1]] <- model_summary
       }
-      model_id <- paste0("FP1_", format_power(p))
-      if (keep_models) {
-        models[[model_id]] <- model
-      }
-      model_summary <- dplyr::tibble(outcome = outcome,
-                                     model_id = model_id, model_type = "FP1", p1 = format_power(p),
-                                     p2 = NA_character_, logLik = as.numeric(stats::logLik(model)),
-                                     deviance = -2 * as.numeric(stats::logLik(model)),
-                                     AIC = stats::AIC(model), BIC = stats::BIC(model))
-      summaries[[length(summaries) + 1]] <- model_summary
     }
-    if (fp_models == "both") {
+    if (fp_models %in% c("both", "fp2")) {
       for (pair in fp2_combinations) {
         p1 <- pair[[1]]
         p2 <- pair[[2]]

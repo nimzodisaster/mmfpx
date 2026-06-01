@@ -28,7 +28,8 @@ positive), but you can optionally request ratio scaling via
 `centering = "sd"`, which divides age by its sample standard deviation without
 recentering.
 By default `mmfp()` evaluates both one-term (FP1) and two-term (FP2) models;
-set `fp_models = "fp1"` when you only want one-term candidates.
+set `fp_models = "fp1"` when you only want one-term candidates or
+`fp_models = "fp2"` when you only want two-term candidates.
 
 `normbytcv()` rescales regions of interest against a reference volume to remove
 global size effects. It addresses the need to compare baseline scans from
@@ -85,6 +86,24 @@ fp_results_fp1_only <- mmfp(
 )
 
 fp_results_fp1_only$results$volumeA$summary
+```
+
+To fit only two-term fractional polynomial models, set `fp_models = "fp2"`:
+
+```{r}
+fp_results_fp2_only <- mmfp(
+  data = simulated_longitudinal_data,
+  outcome_vars = "volumeA",
+  age_var = "age",
+  id_var = "subj_id",
+  visit_var = "visit",
+  powers = c("log", 1),
+  fp_models = "fp2",
+  random_intercept_only = TRUE,
+  keep_models = FALSE
+)
+
+fp_results_fp2_only$results$volumeA$summary
 ```
 
 The summary table includes log-likelihood, deviance, AIC, and BIC values for

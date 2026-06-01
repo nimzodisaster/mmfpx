@@ -357,7 +357,8 @@ variance-stabilising scaling with <code>centering = &quot;sd&quot;</code>, which
 divides age by its sample standard deviation without recentering. By
 default <code>mmfp()</code> evaluates both one-term (FP1) and two-term
 (FP2) models; set <code>fp_models = &quot;fp1&quot;</code> when you only want
-one-term candidates.</p>
+one-term candidates or <code>fp_models = &quot;fp2&quot;</code> when you only want
+two-term candidates.</p>
 <p><code>normbytcv()</code> rescales regions of interest against a
 reference volume to remove global size effects. It addresses the need to
 compare baseline scans from subjects with different head sizes or tissue
@@ -428,6 +429,8 @@ structure.</p>
 <span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;   &lt;chr&gt;    &lt;chr&gt;      &lt;chr&gt; &lt;chr&gt;  &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
 <span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; 1 volumeA FP1_log  FP1        log   &lt;NA&gt;  -2917.    5834. 5842. 5859.</span></span>
 <span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; 2 volumeA FP1_1    FP1        1     &lt;NA&gt;  -2926.    5852. 5860. 5877.</span></span></code></pre></div>
+<p>To fit only two-term fractional polynomial models, set
+<code>fp_models = &quot;fp2&quot;</code>.</p>
 <p>The summary table includes log-likelihood, deviance, AIC, and BIC
 values for each fitted model, helping identify transformations that best
 capture the non-linear age relationship in the outcome of interest. If
